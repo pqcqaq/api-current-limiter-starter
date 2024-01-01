@@ -1,0 +1,7 @@
+## AutoConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  online.zust.qcqcqc.utils.config.condition.LimitAspectCondition, \
+  online.zust.qcqcqc.utils.config.base.BaseLimiterConfig, \
+  online.zust.qcqcqc.utils.manager.BaseRedisLimitManager, \
+  online.zust.qcqcqc.utils.aspects.CurrentLimitAspect, \
+  online.zust.qcqcqc.utils.manager.BaseMapLimitManager

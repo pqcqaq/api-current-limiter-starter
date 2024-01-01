@@ -1,0 +1,72 @@
+package online.zust.qcqcqc.utils.aspects;
+
+import online.zust.qcqcqc.utils.LimiterManager;
+import online.zust.qcqcqc.utils.annotation.CurrentLimit;
+import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
+import online.zust.qcqcqc.utils.entity.Limiter;
+import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
+
+import java.lang.reflect.Method;
+
+/**
+ * @author pqcmm
+ * 使用CGLIB代理
+ */
+@Aspect
+@EnableAspectJAutoProxy(proxyTargetClass = true)
+@Conditional(LimitAspectCondition.class)
+public class CurrentLimitAspect {
+
+    private static final Logger log = LoggerFactory.getLogger(CurrentLimitAspect.class);
+
+    private LimiterManager limiterManager;
+
+    @Autowired
+    public void setLimiterManager(LimiterManager limiterManager) {
+        this.limiterManager = limiterManager;
+    }
+
+
+    @Pointcut("@annotation(online.zust.qcqcqc.utils.annotation.CurrentLimit)")
+    private void check() {
+    }
+
+    @Before("check()")
+    public void before(JoinPoint joinPoint) {
+        log.info("使用：{}，进行限流", limiterManager.getClass().getSimpleName());
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+
+        CurrentLimit limit = method.getAnnotation(CurrentLimit.class);
+        if (limit != null) {
+
+            String key = limit.key().trim();
+            if (key.isEmpty()) {
+                key = method.getName();
+            }
+            Limiter limiter = Limiter.builder().limitNum(limit.limitNum())
+                    .seconds(limit.seconds())
+                    .key(key)
+                    .limitByUser(limit.limitByUser())
+                    .build();
+
+            if (!limiterManager.tryAccess(limiter)) {
+                log.warn("接口：{}，已被限流  key：{}，在{}秒内访问次数超过{}，限流类型：{}",
+                        method.getName(), key, limiter.getSeconds(),
+                        limiter.getLimitNum(),
+                        limiter.isLimitByUser() ? "用户限流" : "全局限流");
+                throw new ApiCurrentLimitException(limit.msg());
+            }
+        }
+    }
+}
