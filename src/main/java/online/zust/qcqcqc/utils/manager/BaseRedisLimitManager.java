@@ -52,6 +52,7 @@ public class BaseRedisLimitManager implements LimiterManager {
     }
 
     public boolean tryAlterStatus(String key, int limitNum, int seconds) {
+        // lua脚本
         String script = """
                 local key = ${key};
                 local limitNum = tonumber(${limitNum});
@@ -65,11 +66,13 @@ public class BaseRedisLimitManager implements LimiterManager {
                 end;
                 return 1;
                 """;
+        // 执行lua脚本
         Long result = redisTemplate.execute(new DefaultRedisScript<>(
                 script.replace("${key}", "'" + key + "'")
                         .replace("${limitNum}", String.valueOf(limitNum))
                         .replace("${seconds}", String.valueOf(seconds)),
                         Long.class),Collections.emptyList());
+        // 返回结果
         return result != null && result == 1;
     }
 

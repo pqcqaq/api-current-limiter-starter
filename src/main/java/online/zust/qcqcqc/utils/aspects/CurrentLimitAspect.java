@@ -5,6 +5,7 @@ import online.zust.qcqcqc.utils.annotation.CurrentLimit;
 import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
 import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
+import online.zust.qcqcqc.utils.exception.ErrorTryAccessException;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -43,7 +44,7 @@ public class CurrentLimitAspect {
 
     @Before("check()")
     public void before(JoinPoint joinPoint) {
-        log.info("使用：{}，进行限流", limiterManager.getClass().getSimpleName());
+        log.debug("使用：{}，进行限流", limiterManager.getClass().getSimpleName());
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
 
@@ -60,7 +61,14 @@ public class CurrentLimitAspect {
                     .limitByUser(limit.limitByUser())
                     .build();
 
-            if (!limiterManager.tryAccess(limiter)) {
+            boolean b;
+            try {
+                b = limiterManager.tryAccess(limiter);
+            } catch (Exception e) {
+                log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
+                throw new ErrorTryAccessException(e.getMessage());
+            }
+            if (!b) {
                 log.warn("接口：{}，已被限流  key：{}，在{}秒内访问次数超过{}，限流类型：{}",
                         method.getName(), key, limiter.getSeconds(),
                         limiter.getLimitNum(),

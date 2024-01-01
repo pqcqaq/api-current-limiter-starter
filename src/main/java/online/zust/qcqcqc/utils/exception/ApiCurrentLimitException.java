@@ -4,6 +4,7 @@ import java.io.Serial;
 
 /**
  * @author pqcmm
+ * 限流异常，当达到限流次数时抛出
  */
 public class ApiCurrentLimitException extends RuntimeException{
     @Serial

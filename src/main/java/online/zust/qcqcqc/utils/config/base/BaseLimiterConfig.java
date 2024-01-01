@@ -14,6 +14,9 @@ import javax.servlet.http.HttpServletRequest;
 @ConditionalOnMissingBean(LimiterConfig.class)
 public class BaseLimiterConfig implements LimiterConfig {
 
+    /**
+     * 请求上下文
+     */
     private HttpServletRequest httpServletRequest;
 
     @Autowired
@@ -23,6 +26,9 @@ public class BaseLimiterConfig implements LimiterConfig {
 
     @Override
     public String getUserKey() {
+        /*
+         * 从请求上下文中获取用户的唯一标识
+         */
         return httpServletRequest.getRemoteAddr();
     }
 }
