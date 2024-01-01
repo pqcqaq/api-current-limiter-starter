@@ -8,7 +8,7 @@
     <dependency>
       <groupId>online.zust.qcqcqc.utils</groupId>
       <artifactId>api-current-limiter-starter</artifactId>
-      <version>1.0.0</version>
+      <version>1.0.1</version>
     </dependency>
     ```
 
@@ -53,6 +53,7 @@
     **异常处理😟：**
 
     - 在禁止访问时会抛出异常：ApiCurrentLimitException.class，可以自定义异常处理器进行处理。
+    - 在尝试访问失败时会抛出异常：ErrorTryAccessException，此后请求会被拒绝。
 
     ----
 
