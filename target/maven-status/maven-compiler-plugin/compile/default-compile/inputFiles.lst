@@ -6,5 +6,5 @@ D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\
 D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\online\zust\qcqcqc\utils\LimiterManager.java
 D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\online\zust\qcqcqc\utils\manager\BaseMapLimitManager.java
 D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\online\zust\qcqcqc\utils\manager\BaseRedisLimitManager.java
+D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\online\zust\qcqcqc\utils\config\LimiterConfig.java
 D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\online\zust\qcqcqc\utils\entity\Limiter.java
-D:\Develop\JavaProgram\Online-Scoring\api-current-limiter-starter\src\main\java\online\zust\qcqcqc\utils\LimiterConfig.java
