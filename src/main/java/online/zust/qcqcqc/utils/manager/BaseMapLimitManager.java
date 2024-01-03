@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
+import java.io.Serial;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author qcqcqc
@@ -18,21 +21,11 @@ public class BaseMapLimitManager implements LimiterManager {
 
     private LimiterConfig limiterConfig;
 
-    private static final ConcurrentHashMap<String, Info> STATUS_MAP = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, List<Long>> STATUS_MAP = new ConcurrentHashMap<>();
 
     @Autowired
     public void setLimiterConfig(LimiterConfig limiterConfig) {
         this.limiterConfig = limiterConfig;
-    }
-
-    private static class Info {
-        private int count;
-        private long time;
-
-        public Info(int count, long time) {
-            this.count = count;
-            this.time = time;
-        }
     }
 
     /**
@@ -52,34 +45,38 @@ public class BaseMapLimitManager implements LimiterManager {
         return tryAlterStatus(key, limitNum, seconds);
     }
 
-    private boolean tryAlterStatus(String key, int limitNum, int seconds) {
+    private static boolean tryAlterStatus(String key, int limitNum, int seconds) {
         // 从map中获取key对应的信息
-        Info info = STATUS_MAP.get(key);
+        List<Long> infos = STATUS_MAP.get(key);
 
         // 如果key不存在，初始化key的信息
-        if (info == null) {
-            STATUS_MAP.put(key, new Info(1, System.currentTimeMillis()));
+        if (infos == null) {
+            STATUS_MAP.put(key, new CopyOnWriteArrayList<>() {
+
+                @Serial
+                private static final long serialVersionUID = -7011652858814940405L;
+
+                {
+                    add(System.nanoTime());
+                }
+            });
             return true;
         } else {
-            // 如果key存在，判断是否超过限制
-            long currentTime = System.currentTimeMillis();
-            long elapsedTime = currentTime - info.time;
-
-            if (elapsedTime > seconds * 1000L) {
-                // 如果超过限制时间，重置key的信息
-                info.count = 1;
-                info.time = currentTime;
+            // key存在，判断指定时间内是否超过限制次数
+            long currentTime = System.nanoTime();
+            long startTime = currentTime - seconds * 1000L * 1000 * 1000;
+            // 删除指定时间之前的数据
+            while (!infos.isEmpty() && infos.get(0) < startTime) {
+                infos.remove(0);
+            }
+            // 判断是否超过限制次数
+            if (infos.size() < limitNum) {
+                // 如果没有超过限制次数，更新key的信息
+                infos.add(currentTime);
                 return true;
             } else {
-                // 如果没有超过限制时间，判断是否超过限制次数
-                if (info.count < limitNum) {
-                    // 如果没有超过限制次数，更新key的信息
-                    info.count++;
-                    return true;
-                } else {
-                    // 如果超过限制次数，返回false
-                    return false;
-                }
+                // 如果超过限制次数，返回false
+                return false;
             }
         }
     }

@@ -51,30 +51,42 @@ public class BaseRedisLimitManager implements LimiterManager {
         return tryAlterStatus(key, limitNum, seconds);
     }
 
-    public boolean tryAlterStatus(String key, int limitNum, int seconds) {
-        // lua脚本
+    private boolean tryAlterStatus(String key, int limitNum, int seconds) {
+        // 获取当前时间，精确到纳秒
+        long currentTimeNanos = System.nanoTime();
+
+        // Lua脚本
         String script = """
                 local key = ${key};
                 local limitNum = tonumber(${limitNum});
                 local seconds = tonumber(${seconds});
-                local currentNum = redis.call('incr', key);
-                if currentNum == 1 then
-                    redis.call('expire', key, seconds);
-                end;
-                if currentNum > limitNum then
+                local currentTime = tonumber(${currentTimeNanos});
+
+                -- 删除指定时间之前的数据
+                redis.call('zremrangebyscore', key, '-inf', currentTime - seconds * 1000000000);
+
+                -- 获取当前有序集合的元素数量
+                local currentNum = redis.call('zcard', key);
+
+                -- 判断是否超过限制次数
+                if currentNum < limitNum then
+                    redis.call('zadd', key, currentTime, currentTime);
+                    return 1;
+                else
                     return 0;
                 end;
-                return 1;
                 """;
-        // 执行lua脚本
+
+        // 执行Lua脚本
         Long result = redisTemplate.execute(new DefaultRedisScript<>(
                 script.replace("${key}", "'" + key + "'")
                         .replace("${limitNum}", String.valueOf(limitNum))
-                        .replace("${seconds}", String.valueOf(seconds)),
-                        Long.class),Collections.emptyList());
+                        .replace("${seconds}", String.valueOf(seconds))
+                        .replace("${currentTimeNanos}", String.valueOf(currentTimeNanos))
+                ,
+                Long.class), Collections.emptyList());
+
         // 返回结果
         return result != null && result == 1;
     }
-
-
 }
