@@ -8,24 +8,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * @author pqcmm
- * 限流注解
+ * @author qcqcqc
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Order(2)
-public @interface CurrentLimit {
+@Order(1)
+public @interface IntervalLimit {
     /**
-     * 限流次数
-     * @return int
+     * 两次请求的间隔时间（ms）
+     * @return  long 默认100ms
      */
-    int limitNum() default 10;
-
-    /**
-     * 限流时间
-     * @return int
-     */
-    int seconds() default 60;
+    long interval() default 100L;
 
     /**
      * 限流key
@@ -43,5 +36,5 @@ public @interface CurrentLimit {
      * 限流提示信息
      * @return String
      */
-    String msg() default "There are currently many people , please try again later!";
+    String msg() default "The request interval is too short. Please try again later!";
 }

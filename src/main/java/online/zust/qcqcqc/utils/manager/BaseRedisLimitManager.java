@@ -51,6 +51,46 @@ public class BaseRedisLimitManager implements LimiterManager {
         return tryAlterStatus(key, limitNum, seconds);
     }
 
+    @Override
+    public boolean checkInterval(Limiter limiter, String key, long interval) {
+        // 生成key
+        if (limiter.isLimitByUser()) {
+            key = limiterConfig.getUserKey() + "-" + key;
+        }
+        // 若key存在，检查上一次请求和这一次请求的间隔时间
+        //  如果间隔时间小于指定的间隔时间，返回false，否则返回true并添加当前时间到有序集合中
+        // 若不存在，直接返回true，并添加当前时间到有序集合中
+        String script = """
+                local key = ${key};
+                local interval = tonumber(${interval});
+                local currentTime = tonumber(${currentTimeNanos});
+
+                -- 获取当前有序集合的元素数量
+                local currentNum = redis.call('zcard', key);
+
+                -- 判断是否超过限制次数
+                if currentNum == 0 then
+                    redis.call('zadd', key, currentTime, currentTime);
+                    return 1;
+                else
+                    local lastTime = redis.call('zrange', key, -1, -1)[1];
+                    if currentTime - lastTime < interval * 1000000 then
+                        return 0;
+                    else
+                        redis.call('zadd', key, currentTime, currentTime);
+                        return 1;
+                    end;
+                end;
+                """;
+        Long execute = redisTemplate.execute(new DefaultRedisScript<>(
+                script.replace("${key}", "'" + key + "'")
+                        .replace("${interval}", String.valueOf(interval))
+                        .replace("${currentTimeNanos}", String.valueOf(System.nanoTime()))
+                ,
+                Long.class), Collections.emptyList());
+        return execute != null && execute == 1;
+    }
+
     private boolean tryAlterStatus(String key, int limitNum, int seconds) {
         // 获取当前时间，精确到纳秒
         long currentTimeNanos = System.nanoTime();

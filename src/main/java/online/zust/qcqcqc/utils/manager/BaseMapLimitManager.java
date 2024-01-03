@@ -45,14 +45,49 @@ public class BaseMapLimitManager implements LimiterManager {
         return tryAlterStatus(key, limitNum, seconds);
     }
 
-    private static boolean tryAlterStatus(String key, int limitNum, int seconds) {
+    @Override
+    public boolean checkInterval(Limiter limiter, String key, long interval) {
+        // 生成key
+        if (limiter.isLimitByUser()) {
+            key = limiterConfig.getUserKey() + "-" + key;
+        }
+        return tryAlterStatus(key, interval);
+    }
+
+    private static synchronized boolean tryAlterStatus(String key, long interval) {
+        // 若key存在，检查上一次请求和这一次请求的间隔时间
+        List<Long> infos = STATUS_MAP.get(key);
+        if (infos != null && !infos.isEmpty()) {
+            long lastTime = infos.get(infos.size() - 1);
+            long currentTime = System.nanoTime();
+            // 如果间隔时间小于指定的间隔时间，返回false
+            if (currentTime - lastTime < interval * 1000L * 1000 ) {
+                return false;
+            }else{
+                // 如果间隔时间大于指定的间隔时间, 允许访问，并更新key的信息
+                infos.add(currentTime);
+                return true;
+            }
+        } else {
+            // 如果key不存在，初始化key的信息
+            STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
+                @Serial
+                private static final long serialVersionUID = -7011652858814940405L;
+                {
+                    add(System.nanoTime());
+                }
+            });
+            return true;
+        }
+    }
+
+    private static synchronized boolean tryAlterStatus(String key, int limitNum, int seconds) {
         // 从map中获取key对应的信息
         List<Long> infos = STATUS_MAP.get(key);
 
         // 如果key不存在，初始化key的信息
         if (infos == null) {
-            STATUS_MAP.put(key, new CopyOnWriteArrayList<>() {
-
+            STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
                 @Serial
                 private static final long serialVersionUID = -7011652858814940405L;
 

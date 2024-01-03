@@ -12,4 +12,12 @@ public interface LimiterManager {
      * @return 是否可以访问
      */
     boolean tryAccess(Limiter limiter);
+
+    /**
+     * 检查两次请求的间隔时间
+     * @param limiter 限制器
+     * @param key 限流key
+     * @return 是否可以访问
+     */
+    boolean checkInterval(Limiter limiter, String key, long interval);
 }
