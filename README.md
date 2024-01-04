@@ -32,6 +32,8 @@
     - 默认：使用ConcurrentHashMap进行限流控制。
     - 自定义：取消设置该选项可以使用自定义算法。
 
+    
+
 2. 🤞在接口上添加注解
 
     ```java
@@ -50,6 +52,8 @@
     4. key为标识，可以为空，为空时默认取方法名。
     5. 还可以指定msg，也就是错误信息。
 
+    
+
     ```java
         @IntervalLimit(interval = 2000, limitByUser = true, key = "IntervalTest", msg = "请求过于频繁")
         @GetMapping("/test/3")
@@ -60,6 +64,8 @@
 
     1. interval为间隔时间，单位毫秒
         - 这个注解用于实现对该接口的请求间隔限制（可用于防抖），默认值为100ms
+
+    
 
     ```java
         @ConcurrentLimit(limitNum = 20, limitByUser = true, key = "ConcurrentTest", msg = "请求过于频繁")
@@ -72,6 +78,8 @@
     1. limitNum：限制最大并发数
         - 这个注解用于实现对该接口的最大并发数限制，默认值为10
 
+    
+
     **异常处理😟：**
 
     - 在禁止访问时会抛出异常：ApiCurrentLimitException，可以自定义异常处理器进行处理。
@@ -81,7 +89,48 @@
 
     ### 高级🤔
 
-3. **（可选）**🤘自定义获取key生成方法
+3. 其他配置项
+
+    ```yaml
+    limiter:
+      enable: true
+      type: redis
+      remote-info:
+        use-proxy: true
+        user-key: X-Forwarded-For
+      global:
+        enable: true
+        limit-num: 100
+        seconds: 60
+        on-method: true
+    ```
+
+    - remote-info配置项内，指定获取远程ip的方法
+
+        - use-proxy：是否启用了反向代理
+
+            > 如果启用了反向代理，则后端不能直接获取到真实IP地址，需要指定请求头中真实ip的key
+
+            - `默认值：false`
+
+        - user-key：在确认开启`use-proxy`的情况下，需要配置该项作为请求头中真实ip的key
+
+            - `默认值：X-Forwarded-For`
+
+    - global配置项内，指定是否开启全局接口限流
+
+        - limit-num表示限流数量
+            - `默认值：100`
+        - seconds表示时间滑动窗口大小
+            - `默认值：10`
+        - on-method：
+            - `默认值：true`
+            - true：配置为单个接口，效果类似全部接口加上`@CurrentLimit`注解
+            - false：配置为后端服务限流，所有接口一起在该配置范围内进行限流
+
+    
+
+4. **（可选）**🤘自定义获取key生成方法
 
     ```java
     /**
@@ -92,13 +141,22 @@
         @Setter(onMethod_ = {@Autowired})
         private HttpServletRequest httpServletRequest;
     
+        @Value("${limiter.remote-info.user-key:X-Forwarded-For}")
+        private String headerKey;
+        @Value("${limiter.remote-info.use-proxy:false}")
+        private Boolean useProxy;
+    
         @Override
         public String getUserKey() {
             // 如果已经登录，则使用用户名作为唯一标识
             User currentUser = ContextUtil.getCurrentUser();
             if (currentUser == null) {
                 // 否则使用IP地址作为唯一标识
-                return httpServletRequest.getRemoteAddr();
+                if (useProxy) {
+                    return httpServletRequest.getHeader(headerKey);
+                } else {
+                    return httpServletRequest.getRemoteAddr();
+                }
             }
             return currentUser.getUsername();
         }
@@ -107,7 +165,7 @@
 
     - ##### ***这只是一个示例，假设limitByUser = true，并且想对业务用户进行限流，则必须实现LimiterConfig中的getUserKey方法，否则只会使用客户端IP进行限流***
 
-4. **（可选）**🫵自定义限流算法
+5. **（可选）**🫵自定义限流算法
 
     1. 取消设置 limiter.type
     2. 编写LimitManager类
@@ -158,10 +216,10 @@
         
             online.zust.qcqcqc.utils.manager.BaseRedisLimitManager（redis + lua实现）
 
-5. 注解执行顺序
+6. 注解执行顺序
 
     ```
-    ConcurrentLimitAspect >> IntervalLimitAspect >> CurrentLimitAspect
+    ConcurrentLimitAspect >> IntervalLimitAspect >> CurrentLimitAspect >> GlobalLimitAspect
     ```
 
 ## 性能🙌
@@ -177,9 +235,9 @@
 
 - √ 请求间隔时间限制（防抖）√
 - √ 对接口并发数进行限制 √
+- √ 全局限流 √
 - 使用漏桶算法和令牌桶算法，实现QPS限流
 - 请求队列 缓流（削峰填谷）
-- 全局限流
 - 拒绝策略
 - 接口等待时间（？
 - 支持SpringBoot3.0+
@@ -193,3 +251,5 @@
 - 1.0.4 添加接口请求间隔注解(可以用来实现防抖)
 - 1.0.5 将Redis脚本移到资源目录，修复了过度占用Redis缓存的问题
 - 1.0.6 新功能：接口最大并发数控制
+- 1.0.7 修复了部分bug，增加全局限流接口
+

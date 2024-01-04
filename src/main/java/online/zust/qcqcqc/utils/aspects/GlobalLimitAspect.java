@@ -1,65 +1,60 @@
 package online.zust.qcqcqc.utils.aspects;
 
 import online.zust.qcqcqc.utils.LimiterManager;
-import online.zust.qcqcqc.utils.annotation.CurrentLimit;
-import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
+import online.zust.qcqcqc.utils.config.condition.GlobalLimitAspectCondition;
 import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
 import online.zust.qcqcqc.utils.exception.ErrorTryAccessException;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Conditional;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 
 /**
- * @author pqcmm
- * 使用CGLIB代理
+ * @author qcqcqc
  */
 @Aspect
-@EnableAspectJAutoProxy(proxyTargetClass = true)
-@Conditional(LimitAspectCondition.class)
-@Order(3)
-public class CurrentLimitAspect {
+@Component
+@Conditional(GlobalLimitAspectCondition.class)
+@Order(4)
+public class GlobalLimitAspect {
 
-    private static final Logger log = LoggerFactory.getLogger(CurrentLimitAspect.class);
-
-    private LimiterManager limiterManager;
+    private static final Logger log = LoggerFactory.getLogger(GlobalLimitAspect.class);
 
     @Autowired
-    public void setLimiterManager(LimiterManager limiterManager) {
-        this.limiterManager = limiterManager;
-    }
+    private LimiterManager limiterManager;
+    @Value("${limiter.global.limit-num:100}")
+    private Integer limitNum;
+    @Value("${limiter.global.seconds:10}")
+    private Integer seconds;
+    @Value("${limiter.global.on-method:true}")
+    private Boolean onMethod;
 
-
-    @Pointcut("@annotation(online.zust.qcqcqc.utils.annotation.CurrentLimit)")
-    private void check() {
-    }
-
-    @Before("check()")
+    @Before("@annotation(online.zust.qcqcqc.utils.annotation.CurrentLimit)")
     public void before(JoinPoint joinPoint) {
         log.debug("使用：{}，进行限流", limiterManager.getClass().getSimpleName());
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
 
-        CurrentLimit limit = method.getAnnotation(CurrentLimit.class);
-
-        String key = limit.key().trim();
-        if (key.isEmpty()) {
-            key = method.getName();
+        String key;
+        if (onMethod) {
+            key = "global-limit-" + signature.getMethod().getName();
+        } else {
+            key = "global-limit";
         }
-        Limiter limiter = Limiter.builder().limitNum(limit.limitNum())
-                .seconds(limit.seconds())
+        Limiter limiter = Limiter.builder().limitNum(limitNum)
+                .seconds(seconds)
                 .key(key)
-                .limitByUser(limit.limitByUser())
+                .limitByUser(false)
                 .build();
 
         boolean b;
@@ -73,8 +68,8 @@ public class CurrentLimitAspect {
             log.warn("接口：{}，已被限流  key：{}，在{}秒内访问次数超过{}，限流类型：{}",
                     method.getName(), key, limiter.getSeconds(),
                     limiter.getLimitNum(),
-                    limiter.isLimitByUser() ? "用户限流" : "全局限流");
-            throw new ApiCurrentLimitException(limit.msg());
+                    "全局限流");
+            throw new ApiCurrentLimitException("there are too many people accessing the service, please try again later");
         }
     }
 }

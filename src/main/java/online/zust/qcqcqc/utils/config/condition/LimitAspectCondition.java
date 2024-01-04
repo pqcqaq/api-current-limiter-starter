@@ -18,7 +18,7 @@ public class LimitAspectCondition implements Condition {
     @Override
     public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
         //检查配置文件是否包含limit.enable
-        boolean b = conditionContext.getEnvironment().containsProperty("limiter.enable");
+        boolean b = Boolean.parseBoolean(conditionContext.getEnvironment().getProperty("limiter.enable"));
         log.info(b ? "限流功能已开启!" : "限流功能已关闭~");
         return b;
     }

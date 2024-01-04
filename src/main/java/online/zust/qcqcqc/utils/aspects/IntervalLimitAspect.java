@@ -47,27 +47,25 @@ public class IntervalLimitAspect {
         Method method = signature.getMethod();
 
         IntervalLimit limit = method.getAnnotation(IntervalLimit.class);
-        if (limit != null) {
 
-            String key = limit.key().trim();
-            if (key.isEmpty()) {
-                key = method.getName();
-            }
-            // 检查间隔时间是否足够，如果不足够则抛出异常
+        String key = limit.key().trim();
+        if (key.isEmpty()) {
+            key = method.getName();
+        }
+        // 检查间隔时间是否足够，如果不足够则抛出异常
 
-            boolean b;
-            try {
-                b = limiterManager.checkInterval(limit.limitByUser(), key, limit.interval());
-            } catch (Exception e) {
-                log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
-                throw new ErrorTryAccessException(e.getMessage());
-            }
-            if (!b) {
-                log.warn("接口：{}，已被限流  key：{}，访问间隔小于:{}，限流类型：{}",
-                        method.getName(), key, limit.interval(),
-                        limit.limitByUser() ? "用户限流" : "全局限流");
-                throw new ApiCurrentLimitException(limit.msg());
-            }
+        boolean b;
+        try {
+            b = limiterManager.checkInterval(limit.limitByUser(), key, limit.interval());
+        } catch (Exception e) {
+            log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
+            throw new ErrorTryAccessException(e.getMessage());
+        }
+        if (!b) {
+            log.warn("接口：{}，已被限流  key：{}，访问间隔小于:{}，限流类型：{}",
+                    method.getName(), key, limit.interval(),
+                    limit.limitByUser() ? "用户限流" : "全局限流");
+            throw new ApiCurrentLimitException(limit.msg());
         }
     }
 }
