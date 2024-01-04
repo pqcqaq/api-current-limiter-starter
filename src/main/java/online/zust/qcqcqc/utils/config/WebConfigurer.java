@@ -11,9 +11,10 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * 和springmvc的webmvc拦截配置一样
+ * 配置全局限流拦截器
+ * 在配置文件中配置 limiter.global.enable=true 来开启全局限流功能
  *
- * @author BIANP
+ * @author qcqcqc
  */
 @Configuration
 @Conditional(GlobalLimitInterceptorCondition.class)
