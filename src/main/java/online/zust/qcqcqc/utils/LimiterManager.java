@@ -8,6 +8,7 @@ import online.zust.qcqcqc.utils.entity.Limiter;
 public interface LimiterManager {
     /**
      * 尝试访问
+     *
      * @param limiter 限制器
      * @return 是否可以访问
      */
@@ -15,9 +16,11 @@ public interface LimiterManager {
 
     /**
      * 检查两次请求的间隔时间
-     * @param limiter 限制器
-     * @param key 限流key
+     *
+     * @param limitByUser 是否根据用户限流
+     * @param key         限流key
+     * @param interval    间隔时间
      * @return 是否可以访问
      */
-    boolean checkInterval(Limiter limiter, String key, long interval);
+    boolean checkInterval(boolean limitByUser, String key, long interval);
 }

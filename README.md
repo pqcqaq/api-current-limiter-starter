@@ -8,7 +8,7 @@
     <dependency>
       <groupId>online.zust.qcqcqc.utils</groupId>
       <artifactId>api-current-limiter-starter</artifactId>
-      <version>1.0.3</version>
+      <version>1.0.5</version>
     </dependency>
     ```
 
@@ -111,19 +111,34 @@
         public boolean tryAccess(Limiter limiter) {
             return false;
         }
+    
+        @Override
+        public boolean checkInterval(boolean limitByUser, String key, long interval) {
+            return false;
+        }
     }
     ```
 
     - 实现tryAccess方法，返回false时拒绝请求，true时允许请求。
-
+    
+        - 在使用CurrentLimit注解时会调用这个方法
+        
+        
+        
+    - 实现checkInterval方法，返回false时拒绝请求，true时允许请求。
+    
+        - 在使用IntervalLimit注解时会调用这个方法
+    
+        
+    
         - 参考：
             online.zust.qcqcqc.utils.manager.BaseMapLimitManager（map实现）
-
+    
             online.zust.qcqcqc.utils.manager.BaseRedisLimitManager（redis实现）
 
 ## 性能🙌
 
-- 使用aop切面编程，在controller方法前切入，使用cglib代理生成动态代理类，对性能影响约为2ms
+- 使用aop切面编程，在controller方法前切入，使用cglib代理生成动态代理类，对性能影响较小。
 
 ## 注意🙏
 
@@ -138,7 +153,7 @@
 - 拒绝策略
 - 接口等待时间（？
 - 支持SpringBoot3.0+
-- 请求间隔时间限制（防抖）
+- √ 请求间隔时间限制（防抖）√
 
 ## 更新日志
 
@@ -147,3 +162,4 @@
 - 1.0.2 移除lombok依赖
 - 1.0.3 将原有计数逻辑改为时间滑动窗口
 - 1.0.4 添加接口请求间隔注解(可以用来实现防抖)
+- 1.0.5 将Redis脚本移到资源目录，修复了过度占用Redis缓存的问题

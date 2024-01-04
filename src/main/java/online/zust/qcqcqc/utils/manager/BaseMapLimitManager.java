@@ -40,21 +40,21 @@ public class BaseMapLimitManager implements LimiterManager {
         int seconds = limiter.getSeconds();
         String key = limiter.getKey();
         if (limiter.isLimitByUser()) {
-            key = limiterConfig.getUserKey() + "-" + key;
+            key = limiterConfig.getUserKey() + "-" + key + "-access";
         }
         return tryAlterStatus(key, limitNum, seconds);
     }
 
     @Override
-    public boolean checkInterval(Limiter limiter, String key, long interval) {
+    public boolean checkInterval(boolean limitByUser, String key, long interval) {
         // 生成key
-        if (limiter.isLimitByUser()) {
-            key = limiterConfig.getUserKey() + "-" + key;
+        if (limitByUser) {
+            key = limiterConfig.getUserKey() + "-" + key + "-interval";
         }
         return tryAlterStatus(key, interval);
     }
 
-    private static synchronized boolean tryAlterStatus(String key, long interval) {
+    private static boolean tryAlterStatus(String key, long interval) {
         // 若key存在，检查上一次请求和这一次请求的间隔时间
         List<Long> infos = STATUS_MAP.get(key);
         if (infos != null && !infos.isEmpty()) {
@@ -81,7 +81,7 @@ public class BaseMapLimitManager implements LimiterManager {
         }
     }
 
-    private static synchronized boolean tryAlterStatus(String key, int limitNum, int seconds) {
+    private static boolean tryAlterStatus(String key, int limitNum, int seconds) {
         // 从map中获取key对应的信息
         List<Long> infos = STATUS_MAP.get(key);
 

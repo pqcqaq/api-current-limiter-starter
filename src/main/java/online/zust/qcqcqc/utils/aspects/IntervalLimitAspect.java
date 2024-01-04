@@ -3,7 +3,6 @@ package online.zust.qcqcqc.utils.aspects;
 import online.zust.qcqcqc.utils.LimiterManager;
 import online.zust.qcqcqc.utils.annotation.IntervalLimit;
 import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
-import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
 import online.zust.qcqcqc.utils.exception.ErrorTryAccessException;
 import org.aspectj.lang.JoinPoint;
@@ -53,13 +52,10 @@ public class IntervalLimitAspect {
                 key = method.getName();
             }
             // 检查间隔时间是否足够，如果不足够则抛出异常
-            Limiter limiter = Limiter.builder()
-                    .limitByUser(limit.limitByUser())
-                    .build();
 
             boolean b;
             try {
-                b = limiterManager.checkInterval(limiter, key, limit.interval());
+                b = limiterManager.checkInterval(limit.limitByUser(), key, limit.interval());
             } catch (Exception e) {
                 log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
                 throw new ErrorTryAccessException(e.getMessage());
@@ -67,7 +63,7 @@ public class IntervalLimitAspect {
             if (!b) {
                 log.warn("接口：{}，已被限流  key：{}，访问间隔小于:{}，限流类型：{}",
                         method.getName(), key, limit.interval(),
-                        limiter.isLimitByUser() ? "用户限流" : "全局限流");
+                        limit.limitByUser() ? "用户限流" : "全局限流");
                 throw new ApiCurrentLimitException(limit.msg());
             }
         }
