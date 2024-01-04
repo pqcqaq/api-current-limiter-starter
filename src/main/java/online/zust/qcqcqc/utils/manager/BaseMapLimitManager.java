@@ -70,13 +70,17 @@ public class BaseMapLimitManager implements LimiterManager {
             }
         } else {
             // 如果key不存在，初始化key的信息
-            STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
+            List<Long> longs = STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
                 @Serial
                 private static final long serialVersionUID = -7011652858814940405L;
+
                 {
                     add(System.nanoTime());
                 }
             });
+            if (longs != null) {
+                return tryAlterStatus(key, interval);
+            }
             return true;
         }
     }
@@ -87,7 +91,7 @@ public class BaseMapLimitManager implements LimiterManager {
 
         // 如果key不存在，初始化key的信息
         if (infos == null) {
-            STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
+            List<Long> longs = STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
                 @Serial
                 private static final long serialVersionUID = -7011652858814940405L;
 
@@ -95,6 +99,9 @@ public class BaseMapLimitManager implements LimiterManager {
                     add(System.nanoTime());
                 }
             });
+            if (longs != null) {
+                return tryAlterStatus(key, limitNum, seconds);
+            }
             return true;
         } else {
             // key存在，判断指定时间内是否超过限制次数
