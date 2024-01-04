@@ -8,7 +8,7 @@
     <dependency>
       <groupId>online.zust.qcqcqc.utils</groupId>
       <artifactId>api-current-limiter-starter</artifactId>
-      <version>1.0.5</version>
+      <version>1.0.6</version>
     </dependency>
     ```
 
@@ -60,6 +60,17 @@
 
     1. interval为间隔时间，单位毫秒
         - 这个注解用于实现对该接口的请求间隔限制（可用于防抖），默认值为100ms
+
+    ```java
+        @ConcurrentLimit(limitNum = 20, limitByUser = true, key = "ConcurrentTest", msg = "请求过于频繁")
+        @GetMapping("/test/4")
+        public Result<String> test4() {
+            return Result.success(ProxyUtil.getBean(LimiterManager.class).getClass().getSimpleName());
+        }
+    ```
+
+    1. limitNum：限制最大并发数
+        - 这个注解用于实现对该接口的最大并发数限制，默认值为10
 
     **异常处理😟：**
 
@@ -116,25 +127,42 @@
         public boolean checkInterval(boolean limitByUser, String key, long interval) {
             return false;
         }
+    
+        @Override
+        public boolean checkConcurrent(boolean limitByUser, String key, int limitNum, boolean set) {
+            return false;
+        }
     }
     ```
 
     - 实现tryAccess方法，返回false时拒绝请求，true时允许请求。
-    
+
         - 在使用CurrentLimit注解时会调用这个方法
         
         
         
     - 实现checkInterval方法，返回false时拒绝请求，true时允许请求。
-    
+
         - 在使用IntervalLimit注解时会调用这个方法
-    
+
         
-    
+
+    - 实现checkConcurrent方法，返回false时拒绝请求，true时允许请求。
+
+      - 在使用ConcurrentLimit注解时会调用这个方法
+
+          
+        
         - 参考：
             online.zust.qcqcqc.utils.manager.BaseMapLimitManager（map + list实现）
-    
+        
             online.zust.qcqcqc.utils.manager.BaseRedisLimitManager（redis + lua实现）
+
+5. 注解执行顺序
+
+    ```
+    ConcurrentLimitAspect >> IntervalLimitAspect >> CurrentLimitAspect
+    ```
 
 ## 性能🙌
 
@@ -164,3 +192,4 @@
 - 1.0.3 将原有计数逻辑改为时间滑动窗口
 - 1.0.4 添加接口请求间隔注解(可以用来实现防抖)
 - 1.0.5 将Redis脚本移到资源目录，修复了过度占用Redis缓存的问题
+- 1.0.6 新功能：接口最大并发数控制
