@@ -132,13 +132,14 @@
         
     
         - 参考：
-            online.zust.qcqcqc.utils.manager.BaseMapLimitManager（map实现）
+            online.zust.qcqcqc.utils.manager.BaseMapLimitManager（map + list实现）
     
-            online.zust.qcqcqc.utils.manager.BaseRedisLimitManager（redis实现）
+            online.zust.qcqcqc.utils.manager.BaseRedisLimitManager（redis + lua实现）
 
 ## 性能🙌
 
 - 使用aop切面编程，在controller方法前切入，使用cglib代理生成动态代理类，对性能影响较小。
+- 推荐使用redis（lua脚本保证原子性），性能更强
 
 ## 注意🙏
 
