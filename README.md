@@ -8,7 +8,7 @@
     <dependency>
       <groupId>online.zust.qcqcqc.utils</groupId>
       <artifactId>api-current-limiter-starter</artifactId>
-      <version>1.0.6</version>
+      <version>1.0.8</version>
     </dependency>
     ```
 
@@ -252,4 +252,5 @@
 - 1.0.5 将Redis脚本移到资源目录，修复了过度占用Redis缓存的问题
 - 1.0.6 新功能：接口最大并发数控制
 - 1.0.7 修复了部分bug，增加全局限流接口
+- 1.0.8 将全局限流的aop改为Interceptor
 
