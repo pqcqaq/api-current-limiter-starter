@@ -1,6 +1,5 @@
 package online.zust.qcqcqc.utils.annotation;
 
-import org.springframework.core.annotation.Order;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -12,12 +11,12 @@ import java.lang.annotation.Target;
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface IntervalLimit {
+public @interface ConcurrentLimit {
     /**
-     * 两次请求的间隔时间（ms）
-     * @return  long 默认100ms
+     * 最大并发数
+     * @return int
      */
-    long interval() default 100L;
+    int limitNum() default 10;
 
     /**
      * 限流key
@@ -35,5 +34,5 @@ public @interface IntervalLimit {
      * 限流提示信息
      * @return String
      */
-    String msg() default "The request interval is too short. Please try again later!";
+    String msg() default "There are currently many people , please try again later!";
 }

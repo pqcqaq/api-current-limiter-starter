@@ -5,4 +5,5 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   online.zust.qcqcqc.utils.manager.BaseRedisLimitManager, \
   online.zust.qcqcqc.utils.aspects.CurrentLimitAspect, \
   online.zust.qcqcqc.utils.aspects.IntervalLimitAspect, \
+  online.zust.qcqcqc.utils.aspects.ConcurrentLimitAspect, \
   online.zust.qcqcqc.utils.manager.BaseMapLimitManager

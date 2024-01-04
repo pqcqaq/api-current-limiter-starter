@@ -45,46 +45,6 @@ public class BaseMapLimitManager implements LimiterManager {
         return tryAlterStatus(key, limitNum, seconds);
     }
 
-    @Override
-    public boolean checkInterval(boolean limitByUser, String key, long interval) {
-        // 生成key
-        if (limitByUser) {
-            key = limiterConfig.getUserKey() + "-" + key + "-interval";
-        }
-        return tryAlterStatus(key, interval);
-    }
-
-    private static boolean tryAlterStatus(String key, long interval) {
-        // 若key存在，检查上一次请求和这一次请求的间隔时间
-        List<Long> infos = STATUS_MAP.get(key);
-        if (infos != null && !infos.isEmpty()) {
-            long lastTime = infos.get(infos.size() - 1);
-            long currentTime = System.nanoTime();
-            // 如果间隔时间小于指定的间隔时间，返回false
-            if (currentTime - lastTime < interval * 1000L * 1000 ) {
-                return false;
-            }else{
-                // 如果间隔时间大于指定的间隔时间, 允许访问，并更新key的信息
-                infos.add(currentTime);
-                return true;
-            }
-        } else {
-            // 如果key不存在，初始化key的信息
-            List<Long> longs = STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
-                @Serial
-                private static final long serialVersionUID = -7011652858814940405L;
-
-                {
-                    add(System.nanoTime());
-                }
-            });
-            if (longs != null) {
-                return tryAlterStatus(key, interval);
-            }
-            return true;
-        }
-    }
-
     private static boolean tryAlterStatus(String key, int limitNum, int seconds) {
         // 从map中获取key对应的信息
         List<Long> infos = STATUS_MAP.get(key);
@@ -114,6 +74,101 @@ public class BaseMapLimitManager implements LimiterManager {
             // 判断是否超过限制次数
             if (infos.size() < limitNum) {
                 // 如果没有超过限制次数，更新key的信息
+                infos.add(currentTime);
+                return true;
+            } else {
+                // 如果超过限制次数，返回false
+                return false;
+            }
+        }
+    }
+
+    /**
+     * 检查两次请求的间隔时间
+     *
+     * @param limitByUser 是否根据用户限流
+     * @param key         限流key
+     * @param interval    间隔时间
+     * @return 是否可以访问
+     */
+    @Override
+    public boolean checkInterval(boolean limitByUser, String key, long interval) {
+        // 生成key
+        if (limitByUser) {
+            key = limiterConfig.getUserKey() + "-" + key + "-interval";
+        }
+        return tryAlterStatus(key, interval);
+    }
+
+    private static boolean tryAlterStatus(String key, long interval) {
+        // 若key存在，检查上一次请求和这一次请求的间隔时间
+        List<Long> infos = STATUS_MAP.get(key);
+        if (infos != null && !infos.isEmpty()) {
+            long lastTime = infos.get(infos.size() - 1);
+            long currentTime = System.nanoTime();
+            // 如果间隔时间小于指定的间隔时间，返回false
+            if (currentTime - lastTime < interval * 1000L * 1000) {
+                return false;
+            } else {
+                // 如果间隔时间大于指定的间隔时间, 允许访问，并更新key的信息
+                infos.add(currentTime);
+                return true;
+            }
+        } else {
+            // 如果key不存在，初始化key的信息
+            List<Long> longs = STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
+                @Serial
+                private static final long serialVersionUID = -7011652858814940405L;
+
+                {
+                    add(System.nanoTime());
+                }
+            });
+            if (longs != null) {
+                return tryAlterStatus(key, interval);
+            }
+            return true;
+        }
+    }
+
+    @Override
+    public boolean checkConcurrent(boolean limitByUser, String key, int limitNum, boolean set) {
+        if (limitByUser) {
+            key = limiterConfig.getUserKey() + "-" + key + "-concurrent";
+        }
+        return tryAlterStatus(key, limitNum, set);
+    }
+
+    private static boolean tryAlterStatus(String key, int limitNum, boolean set) {
+        // 从map中获取key对应的信息
+        List<Long> infos = STATUS_MAP.get(key);
+        // 若key不存在，初始化key的信息，并返回true，否则检查并发数，如果超过限制返回false，否则返回true
+        if (!set) {
+            if (infos == null) {
+                return true;
+            }
+            infos.remove(0);
+            return true;
+        }
+        if (infos == null) {
+            List<Long> longs = STATUS_MAP.putIfAbsent(key, new CopyOnWriteArrayList<>() {
+                @Serial
+                private static final long serialVersionUID = -7011652858814940405L;
+
+                {
+                    add(System.nanoTime());
+                }
+            });
+            if (longs != null) {
+                return tryAlterStatus(key, limitNum, set);
+            }
+            return true;
+        } else {
+            // key存在，判断指定时间内是否超过限制次数
+            // 判断是否超过限制次数
+            if (infos.size() < limitNum) {
+                // 如果没有超过限制次数，更新key的信息
+                long currentTime = System.nanoTime();
                 infos.add(currentTime);
                 return true;
             } else {

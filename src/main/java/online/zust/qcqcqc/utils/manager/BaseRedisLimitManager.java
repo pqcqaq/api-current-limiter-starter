@@ -33,6 +33,7 @@ public class BaseRedisLimitManager implements LimiterManager {
 
     private static byte[] TRY_ALTER_STATUS_SCRIPT_BYTE;
     private static byte[] CHECK_INTERVAL_SCRIPT_BYTE;
+    private static byte[] CHECK_CONCURRENT_SCRIPT_BYTE;
 
     @Autowired
     public void setLimiterConfig(LimiterConfig limiterConfig) {
@@ -45,9 +46,11 @@ public class BaseRedisLimitManager implements LimiterManager {
         // 读取lua脚本
         ClassPathResource tryAlterStatusResource = new ClassPathResource("scripts/tryAlterStatus.lua");
         ClassPathResource checkIntervalResource = new ClassPathResource("scripts/checkInterval.lua");
+        ClassPathResource checkConcurrentResource = new ClassPathResource("scripts/checkConcurrent.lua");
         try {
             TRY_ALTER_STATUS_SCRIPT_BYTE = tryAlterStatusResource.getInputStream().readAllBytes();
             CHECK_INTERVAL_SCRIPT_BYTE = checkIntervalResource.getInputStream().readAllBytes();
+            CHECK_CONCURRENT_SCRIPT_BYTE = checkConcurrentResource.getInputStream().readAllBytes();
         } catch (Exception e) {
             log.error("读取lua脚本失败：{}", e.getMessage());
             throw new CannotLoadLuaScriptException("读取lua脚本失败：" + e.getMessage());
@@ -76,21 +79,29 @@ public class BaseRedisLimitManager implements LimiterManager {
         long currentTimeNanos = System.nanoTime();
 
         // Lua脚本
-        Long result = redisTemplate.execute((RedisCallback<Long>) connection ->
-                connection.eval(TRY_ALTER_STATUS_SCRIPT_BYTE,
-                        ReturnType.INTEGER,
-                        1,
-                        redisTemplate.getStringSerializer().serialize(key),
-                        redisTemplate.getStringSerializer().serialize(String.valueOf(limitNum)),
-                        redisTemplate.getStringSerializer().serialize(String.valueOf(seconds)),
-                        redisTemplate.getStringSerializer().serialize(String.valueOf(currentTimeNanos))
-                ));
+        Long result = redisTemplate.execute((RedisCallback<Long>) connection -> connection.eval(
+                TRY_ALTER_STATUS_SCRIPT_BYTE,
+                ReturnType.INTEGER,
+                1,
+                redisTemplate.getStringSerializer().serialize(key),
+                redisTemplate.getStringSerializer().serialize(String.valueOf(limitNum)),
+                redisTemplate.getStringSerializer().serialize(String.valueOf(seconds)),
+                redisTemplate.getStringSerializer().serialize(String.valueOf(currentTimeNanos))
+        ));
 
 
         // 返回结果
-        return result != null && result == 1;
+        return result != null && result.equals(1L);
     }
 
+    /**
+     * 检查两次请求的间隔时间
+     *
+     * @param limitByUser 是否根据用户限流
+     * @param key         限流key
+     * @param interval    间隔时间
+     * @return 是否可以访问
+     */
     @Override
     public boolean checkInterval(boolean limitByUser, String key, long interval) {
         int maxLog = 21;
@@ -114,6 +125,28 @@ public class BaseRedisLimitManager implements LimiterManager {
                 redisTemplate.getStringSerializer().serialize(String.valueOf(System.nanoTime())),
                 redisTemplate.getStringSerializer().serialize(String.valueOf(maxLog))
         ));
-        return result != null && result == 1;
+        return result != null && result.equals(1L);
+    }
+
+    @Override
+    public boolean checkConcurrent(boolean limitByUser, String key, int limitNum, boolean set) {
+        if (limitByUser) {
+            key = limiterConfig.getUserKey() + "-" + key + "-concurrent";
+        }
+        return tryAlterStatus(key, limitNum, set);
+    }
+
+    private boolean tryAlterStatus(String key, int limitNum, boolean set) {
+        long currentTime = System.nanoTime();
+        Long result = redisTemplate.execute((RedisCallback<Long>) connection -> connection.eval(
+                CHECK_CONCURRENT_SCRIPT_BYTE,
+                ReturnType.INTEGER,
+                1,
+                redisTemplate.getStringSerializer().serialize(key),
+                redisTemplate.getStringSerializer().serialize(String.valueOf(limitNum)),
+                redisTemplate.getStringSerializer().serialize(String.valueOf(set)),
+                redisTemplate.getStringSerializer().serialize(String.valueOf(currentTime))
+        ));
+        return result != null && result.equals(1L);
     }
 }

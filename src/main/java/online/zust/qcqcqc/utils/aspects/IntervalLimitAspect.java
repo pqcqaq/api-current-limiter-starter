@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.core.annotation.Order;
 
 import java.lang.reflect.Method;
 
@@ -25,6 +26,7 @@ import java.lang.reflect.Method;
 @Aspect
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 @Conditional(LimitAspectCondition.class)
+@Order(2)
 public class IntervalLimitAspect {
     private static final Logger log = LoggerFactory.getLogger(IntervalLimitAspect.class);
 
