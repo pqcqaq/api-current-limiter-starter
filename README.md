@@ -8,11 +8,13 @@
     <dependency>
       <groupId>online.zust.qcqcqc.utils</groupId>
       <artifactId>api-current-limiter-starter</artifactId>
-      <version>1.0.8</version>
+      <version>1.1.0</version>
     </dependency>
     ```
 
     > 🥰已经发布在中央仓库：https://central.sonatype.com/artifact/online.zust.qcqcqc.utils/api-current-limiter-starter
+
+- 上一个版本是：1.0.8
 
 
 
@@ -40,7 +42,7 @@
         @CurrentLimit(limitNum = 20, seconds = 10, limitByUser = true, key = "LimitTest", msg = "请求过于频繁")
         @GetMapping("/test")
         public Result<String> test() {
-            return Result.success("test");
+            return Result.success(ProxyUtil.getBean(CurrentLimiterManager.class).getClass().getSimpleName());
         }
     ```
 
@@ -58,7 +60,7 @@
         @IntervalLimit(interval = 2000, limitByUser = true, key = "IntervalTest", msg = "请求过于频繁")
         @GetMapping("/test/3")
         public Result<String> test3() {
-            return Result.success(ProxyUtil.getBean(LimiterManager.class).getClass().getSimpleName());
+            return Result.success(ProxyUtil.getBean(IntervalLimiterManager.class).getClass().getSimpleName());
         }
     ```
 
@@ -71,7 +73,7 @@
         @ConcurrentLimit(limitNum = 20, limitByUser = true, key = "ConcurrentTest", msg = "请求过于频繁")
         @GetMapping("/test/4")
         public Result<String> test4() {
-            return Result.success(ProxyUtil.getBean(LimiterManager.class).getClass().getSimpleName());
+            return Result.success(ProxyUtil.getBean(ConcurrentLimiterManager.class).getClass().getSimpleName());
         }
     ```
 
@@ -122,7 +124,7 @@
         - limit-num表示限流数量
             - `默认值：100`
         - seconds表示时间滑动窗口大小
-            - `默认值：10`
+            - `默认值：10`s
         - on-method：
             - `默认值：true`
             - true：配置为单个接口，效果类似全部接口加上`@CurrentLimit`注解
@@ -165,57 +167,21 @@
 
     - ##### ***这只是一个示例，假设limitByUser = true，并且想对业务用户进行限流，则必须实现LimiterConfig中的getUserKey方法，否则只会使用客户端IP进行限流***
 
+    
+
 5. **（可选）**🫵自定义限流算法
 
     1. 取消设置 limiter.type
-    2. 编写LimitManager类
-
-    ```java
-    /**
-     * @author qcqcqc
-     */
-    @Component
-    public class TestLimiterManager implements LimiterManager {
-        @Override
-        public boolean tryAccess(Limiter limiter) {
-            return false;
-        }
+    2. 编写LimitManager接口的子接口的实现类
+        - 实现流量限制：CurrentLimiterManager
+        - 实现并发限制：ConcurrentLimiterManager
+        - 实现间隔限制：IntervalLimiterManager
+        - 这些接口都有这样的方法`boolean tryAccess(Limiter limiter);`
+            - 通过实现这个方法就可以实现对应的算法处理
+            - 别忘了添加@Component注解来替换默认的组件
+            - 以下是通过redis和map实现算法的示例代码：
+            - ![](https://cdn.jsdelivr.net/gh/pqcqaq/imageSource/upload/20240222201411.png)
     
-        @Override
-        public boolean checkInterval(boolean limitByUser, String key, long interval) {
-            return false;
-        }
-    
-        @Override
-        public boolean checkConcurrent(boolean limitByUser, String key, int limitNum, boolean set) {
-            return false;
-        }
-    }
-    ```
-
-    - 实现tryAccess方法，返回false时拒绝请求，true时允许请求。
-
-        - 在使用CurrentLimit注解时会调用这个方法
-        
-        
-        
-    - 实现checkInterval方法，返回false时拒绝请求，true时允许请求。
-
-        - 在使用IntervalLimit注解时会调用这个方法
-
-        
-
-    - 实现checkConcurrent方法，返回false时拒绝请求，true时允许请求。
-
-      - 在使用ConcurrentLimit注解时会调用这个方法
-
-          
-        
-        - 参考：
-            online.zust.qcqcqc.utils.manager.BaseMapLimitManager（map + list实现）
-        
-            online.zust.qcqcqc.utils.manager.BaseRedisLimitManager（redis + lua实现）
-
 6. 注解执行顺序
 
     ```
@@ -227,9 +193,13 @@
 - 使用aop切面编程，在controller方法前切入，使用cglib代理生成动态代理类，对性能影响较小。
 - 推荐使用redis（lua脚本保证原子性），性能更强
 
+
+
 ## 注意🙏
 
 - 在自定义限流算法时，记得别忘了对并发请求的处理，避免实际限流值大于设定值。
+
+
 
 ## 展望☝️
 
@@ -242,6 +212,8 @@
 - 接口等待时间（？
 - 支持SpringBoot3.0+
 
+
+
 ## 更新日志
 
 - 1.0.0 正式发布
@@ -253,4 +225,5 @@
 - 1.0.6 新功能：接口最大并发数控制
 - 1.0.7 修复了部分bug，增加全局限流接口
 - 1.0.8 将全局限流的aop改为Interceptor
+- 1.1.0 `使用全新的设计思路，将tryAccess职责抽象抬高，并延伸出更多实现类，降低各个功能耦合性`
 

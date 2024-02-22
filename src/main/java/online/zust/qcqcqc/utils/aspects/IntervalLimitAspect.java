@@ -1,10 +1,11 @@
 package online.zust.qcqcqc.utils.aspects;
 
-import online.zust.qcqcqc.utils.LimiterManager;
 import online.zust.qcqcqc.utils.annotation.IntervalLimit;
 import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
+import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
 import online.zust.qcqcqc.utils.exception.ErrorTryAccessException;
+import online.zust.qcqcqc.utils.limiters.IntervalLimiterManager;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -30,11 +31,11 @@ import java.lang.reflect.Method;
 public class IntervalLimitAspect {
     private static final Logger log = LoggerFactory.getLogger(IntervalLimitAspect.class);
 
-    private LimiterManager limiterManager;
+    private IntervalLimiterManager intervalLimiterManager;
 
     @Autowired
-    public void setLimiterManager(LimiterManager limiterManager) {
-        this.limiterManager = limiterManager;
+    public void setIntervalLimiterManager(IntervalLimiterManager intervalLimiterManager) {
+        this.intervalLimiterManager = intervalLimiterManager;
     }
 
     @Pointcut("@annotation(online.zust.qcqcqc.utils.annotation.IntervalLimit)")
@@ -56,9 +57,14 @@ public class IntervalLimitAspect {
 
         boolean b;
         try {
-            b = limiterManager.checkInterval(limit.limitByUser(), key, limit.interval());
+            Limiter build = Limiter.builder()
+                    .interval(limit.interval())
+                    .key(key)
+                    .limitByUser(limit.limitByUser())
+                    .build();
+            b = intervalLimiterManager.tryAccess(build);
         } catch (Exception e) {
-            log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
+            log.error("限流器：{}，发生异常：{}", intervalLimiterManager.getClass().getSimpleName(), e.getMessage());
             throw new ErrorTryAccessException(e.getMessage());
         }
         if (!b) {

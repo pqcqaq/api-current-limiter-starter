@@ -1,11 +1,11 @@
 package online.zust.qcqcqc.utils.aspects;
 
-import online.zust.qcqcqc.utils.LimiterManager;
 import online.zust.qcqcqc.utils.annotation.CurrentLimit;
 import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
 import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
 import online.zust.qcqcqc.utils.exception.ErrorTryAccessException;
+import online.zust.qcqcqc.utils.limiters.CurrentLimiterManager;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -32,11 +32,11 @@ public class CurrentLimitAspect {
 
     private static final Logger log = LoggerFactory.getLogger(CurrentLimitAspect.class);
 
-    private LimiterManager limiterManager;
+    private CurrentLimiterManager currentLimiterManager;
 
     @Autowired
-    public void setLimiterManager(LimiterManager limiterManager) {
-        this.limiterManager = limiterManager;
+    public void setCurrentLimiterManager(CurrentLimiterManager currentLimiterManager) {
+        this.currentLimiterManager = currentLimiterManager;
     }
 
 
@@ -46,7 +46,7 @@ public class CurrentLimitAspect {
 
     @Before("check()")
     public void before(JoinPoint joinPoint) {
-        log.debug("使用：{}，进行限流", limiterManager.getClass().getSimpleName());
+        log.debug("使用：{}，进行限流", currentLimiterManager.getClass().getSimpleName());
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
 
@@ -60,13 +60,14 @@ public class CurrentLimitAspect {
                 .seconds(limit.seconds())
                 .key(key)
                 .limitByUser(limit.limitByUser())
+                .isBefore(false)
                 .build();
 
         boolean b;
         try {
-            b = limiterManager.tryAccess(limiter);
+            b = currentLimiterManager.tryAccess(limiter);
         } catch (Exception e) {
-            log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
+            log.error("限流器：{}，发生异常：{}", currentLimiterManager.getClass().getSimpleName(), e.getMessage());
             throw new ErrorTryAccessException(e.getMessage());
         }
         if (!b) {

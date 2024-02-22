@@ -1,9 +1,10 @@
 package online.zust.qcqcqc.utils.aspects;
 
-import online.zust.qcqcqc.utils.LimiterManager;
 import online.zust.qcqcqc.utils.annotation.ConcurrentLimit;
 import online.zust.qcqcqc.utils.config.condition.LimitAspectCondition;
+import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
+import online.zust.qcqcqc.utils.limiters.ConcurrentLimiterManager;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -30,11 +31,11 @@ public class ConcurrentLimitAspect {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentLimitAspect.class);
 
-    private LimiterManager limiterManager;
+    private ConcurrentLimiterManager concurrentLimiterManager;
 
     @Autowired
-    public void setLimiterManager(LimiterManager limiterManager) {
-        this.limiterManager = limiterManager;
+    public void setConcurrentLimiterManager(ConcurrentLimiterManager concurrentLimiterManager) {
+        this.concurrentLimiterManager = concurrentLimiterManager;
     }
 
     @Pointcut("@annotation(online.zust.qcqcqc.utils.annotation.ConcurrentLimit)")
@@ -48,7 +49,12 @@ public class ConcurrentLimitAspect {
 
         ConcurrentLimit limit = method.getAnnotation(ConcurrentLimit.class);
         // 在处理之前检查访问记录
-        boolean b = limiterManager.checkConcurrent(limit.limitByUser(), limit.key(), limit.limitNum(), true);
+        Limiter build = Limiter.builder().limitNum(limit.limitNum())
+                .limitByUser(limit.limitByUser())
+                .key(limit.key())
+                .isBefore(true)
+                .build();
+        boolean b = concurrentLimiterManager.tryAccess(build);
         if (!b) {
             log.warn("接口：{}，已被限流  key：{}，并发数超过{}，限流类型：{}",
                     method.getName(), limit.key(), limit.limitNum(),
@@ -59,7 +65,8 @@ public class ConcurrentLimitAspect {
             return proceedingJoinPoint.proceed();
         } finally {
             // 在处理之后移除访问记录
-            limiterManager.checkConcurrent(limit.limitByUser(), limit.key(), limit.limitNum(), false);
+            build.setBefore(false);
+            concurrentLimiterManager.tryAccess(build);
         }
     }
 }

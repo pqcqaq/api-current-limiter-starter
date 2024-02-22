@@ -1,9 +1,9 @@
 package online.zust.qcqcqc.utils.interceptor;
 
-import online.zust.qcqcqc.utils.LimiterManager;
 import online.zust.qcqcqc.utils.entity.Limiter;
 import online.zust.qcqcqc.utils.exception.ApiCurrentLimitException;
 import online.zust.qcqcqc.utils.exception.ErrorTryAccessException;
+import online.zust.qcqcqc.utils.limiters.CurrentLimiterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ public class GlobalLimitInterceptor implements HandlerInterceptor {
     private static final Logger log = LoggerFactory.getLogger(GlobalLimitInterceptor.class);
 
     @Autowired
-    private LimiterManager limiterManager;
+    private CurrentLimiterManager currentLimiterManager;
     @Value("${limiter.global.limit-num:100}")
     private Integer limitNum;
     @Value("${limiter.global.seconds:10}")
@@ -33,7 +33,7 @@ public class GlobalLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        log.debug("使用：{}，进行限流", limiterManager.getClass().getSimpleName());
+        log.debug("使用：{}，进行限流", currentLimiterManager.getClass().getSimpleName());
         if (handler instanceof HandlerMethod h) {
             Method method = h.getMethod();
 
@@ -51,9 +51,9 @@ public class GlobalLimitInterceptor implements HandlerInterceptor {
 
             boolean b;
             try {
-                b = limiterManager.tryAccess(limiter);
+                b = currentLimiterManager.tryAccess(limiter);
             } catch (Exception e) {
-                log.error("限流器：{}，发生异常：{}", limiterManager.getClass().getSimpleName(), e.getMessage());
+                log.error("限流器：{}，发生异常：{}", currentLimiterManager.getClass().getSimpleName(), e.getMessage());
                 throw new ErrorTryAccessException(e.getMessage());
             }
             if (!b) {
