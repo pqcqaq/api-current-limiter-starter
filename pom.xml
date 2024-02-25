@@ -7,7 +7,7 @@
     <!--  项目信息  -->
     <groupId>online.zust.qcqcqc.utils</groupId>
     <artifactId>api-current-limiter-starter</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
