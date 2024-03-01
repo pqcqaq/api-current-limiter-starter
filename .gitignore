@@ -1,8 +1,8 @@
 HELP.md
-target/
+targetClass/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+!**/src/main/**/targetClass/
+!**/src/test/**/targetClass/
 
 ### STS ###
 .apt_generated
@@ -36,5 +36,5 @@ build/
 *.properties
 /src/main/resources/application-home.yaml
 
-### target ###
-/target/
+### targetClass ###
+/targetClass/
